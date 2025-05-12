@@ -8,12 +8,11 @@ This directory contains modular, clean, and conflict-free personal shell scripts
 |------------------|----------------------------------------------|
 | `.aliases`        | Universal aliases (ls, cd, etc.) — no python, pip, git here |
 | `.colors`         | Shell prompt color scheme and styles        |
-| `.common`         | Common reusable functions (shared utilities) |
+| `.common`         | Common reusable settings (shared utilities) |
 | `.functions`      | Personal functions (video, audio, debug, system) |
 | `.git-functions`  | Git-specific functions (push, open, hooks)   |
 | `.git-hooks`      | Git hooks templates (copied by `git_set_hooks`) |
 | `.vnv`            | VNV manager (env creation, activation, safety wrappers) |
-| `.git/`           | Git repo folder (if using Git here)          |
 
 ## Usage
 
