@@ -1,0 +1,74 @@
+# Add, commit and push all changes with a message  
+# Usage: gitpush "My commit message"
+gitpush() {
+  if [[ -z "$1" ]]; then
+    echo "Usage: gitpush 'commit message'"
+    return 1
+  fi
+  git add --all
+  git commit -m "$1"
+  git push
+  echo "✅ Changes pushed to remote."
+}
+
+# Open the current Git repository in browser (GitHub, GitLab, etc.)  
+# Usage: gitopen [optional_path]
+gitopen() {
+  local targetDir="${1:-.}"
+
+  # Find .git directory upwards
+  while [ ! -d "$targetDir/.git" ]; do
+    local parent="$(dirname "$targetDir")"
+    if [ "$parent" = "$targetDir" ]; then
+      echo "❌ No .git directory found."
+      return 1
+    fi
+    targetDir="$parent"
+  done
+
+  # Get origin remote URL
+  local remoteUrl
+  remoteUrl="$(git -C "$targetDir" remote get-url origin 2>/dev/null)"
+  if [ -z "$remoteUrl" ]; then
+    echo "❌ No 'origin' remote found."
+    return 1
+  fi
+
+  # Convert SSH URL to HTTPS and clean up .git suffix
+  if [[ "$remoteUrl" =~ ^git@([^:]+):([^/]+)/(.+)\.git$ ]]; then
+    remoteUrl="https://${BASH_REMATCH[1]}/${BASH_REMATCH[2]}/${BASH_REMATCH[3]}"
+  else
+    remoteUrl="${remoteUrl%.git}"
+  fi
+
+  # Open in browser
+  if command -v xdg-open >/dev/null; then
+    xdg-open "$remoteUrl"
+  elif command -v open >/dev/null; then
+    open "$remoteUrl"
+  else
+    echo "Cannot detect browser command. Open manually:"
+    echo "$remoteUrl"
+  fi
+}
+
+# Install or remove local git hooks from scripts/.git-hooks  
+# Usage: git_set_hooks true    → install hooks  
+#        git_set_hooks false   → remove hooks  
+git_set_hooks() {
+  local action="$1"
+  local hooks_dir="$HOME/scripts/.git-hooks"
+  local target_dir="$HOME/.git-hooks"
+
+  if [[ "$action" == "true" ]]; then
+    [[ ! -d "$hooks_dir" ]] && echo "❌ Hooks dir '$hooks_dir' not found." && return 1
+    mkdir -p "$target_dir"
+    cp -R "$hooks_dir/"* "$target_dir/"
+    echo "✅ Git hooks installed to $target_dir"
+  elif [[ "$action" == "false" ]]; then
+    [[ -d "$target_dir" ]] && rm -rf "$target_dir" && echo "❎ Git hooks removed from $target_dir"
+  else
+    echo "Usage: git_set_hooks true|false"
+    return 1
+  fi
+}

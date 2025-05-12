@@ -1,0 +1,13 @@
+#!/bin/bash
+
+branch=$(git rev-parse --abbrev-ref HEAD)
+
+if [[ "$branch" == "main" || "$branch" == "master" ]]; then
+    echo "⚠️  You are committing to '$branch'."
+    echo -n "Are you sure? (y/n): " > /dev/tty
+    read confirm < /dev/tty  # Forces input from actual terminal
+    if [[ "$confirm" != "y" ]]; then
+        echo "🚫 Push aborted."
+        exit 1
+    fi
+fi

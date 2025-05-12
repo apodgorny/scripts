@@ -1,0 +1,105 @@
+# Open VSCode in current directory  
+# Usage: code .
+code() { VSCODE_CWD="$PWD" open -n -b "com.microsoft.VSCode" --args "$@" ;}
+
+# Show PATH line by line, sorted  
+# Usage: path
+path() { echo "$PATH" | tr ':' '\n' | sort; }
+
+# Convert video to MP3  
+# Usage: video_to_mp3 my_video.mp4
+video_to_mp3() {
+	video_file="$1"
+	output_mp3="${video_file%.*}.mp3"
+	[[ ! -f "$video_file" ]] && echo "❌ File not found" && return 1
+	echo "🎵 Converting $video_file to MP3..."
+	ffmpeg -i "$video_file" -vn -acodec libmp3lame -b:a 128k "$output_mp3"
+	echo "✅ Saved as $output_mp3"
+}
+
+# Transcribe MP3 to text using Whisper  
+# Usage: transcribe_mp3 my_audio.mp3 medium Russian
+transcribe_mp3() {
+	audio_file="$1"
+	model_size="${2:-medium}"
+	language="${3:-auto}"
+	[[ ! -f "$audio_file" ]] && echo "❌ File not found" && return 1
+	output_txt="${audio_file%.*}.txt"
+	echo "📝 Transcribing $audio_file..."
+	PYTHONWARNINGS="ignore" whisper "$audio_file" --model "$model_size" --language "$language" --output_format txt --verbose False > "$output_txt" 2>/dev/null
+	echo "✅ Transcription saved as $output_txt"
+}
+
+# Convert video and transcribe in one step  
+# Usage: transcribe_video my_video.mp4 large English
+transcribe_video() {
+	video_file="$1"
+	model_size="${2:-medium}"
+	language="${3:-auto}"
+	video_to_mp3 "$video_file"
+	mp3_file="${video_file%.*}.mp3"
+	[[ -f "$mp3_file" ]] && transcribe_mp3 "$mp3_file" "$model_size" "$language" || echo "❌ MP3 conversion failed."
+}
+
+# Launch python script in debug mode, wait for client  
+# Usage: debugpy myscript.py
+debugpy() {
+	[[ -z "$1" ]] && echo "Usage: debugpy <script.py> [args]" && return 1
+	echo "📡 Waiting for debugger..."
+	python -m debugpy --listen 5678 --wait-for-client "$@"
+}
+
+# Remove all files or dirs with name in given dir recursively  
+# Usage: recursive_rm ~/my/avatar __pycache__
+recursive_rm() {
+	target_dir="$1"
+	item_name="$2"
+	[[ -z "$target_dir" || -z "$item_name" ]] && echo "Usage: recursive_rm <dir> <name>" && return 1
+	find "$target_dir" \( -type d -o -type f \) -name "$item_name" -exec rm -rf {} +
+}
+
+# Kill process by name (force kill)  
+# Usage: stop node
+stop() {
+	[[ -z "$1" ]] && echo "Usage: stop <process_name>" && return 1
+	pids=$(pgrep -f "$1")
+	[[ -z "$pids" ]] && echo "No process found" && return 1
+	echo "Killing: $pids"
+	kill -9 $pids
+}
+
+# Kill all processes using specific port (handles multiple PIDs)  
+# Usage: kill_on_port 8080
+kill_on_port() {
+	[[ -z "$1" ]] && echo "Usage: kill_on_port <port>" && return 1
+	PIDS=$(lsof -ti tcp:$1)
+	if [[ -z "$PIDS" ]]; then
+		echo "No process on port $1"
+		return 0
+	fi
+	echo "Killing on port $1: $PIDS"
+	for pid in $PIDS; do
+		kill -9 "$pid"
+	done
+}
+
+# View markdown file in browser via live-server  
+# Usage: mdview my_file.md
+mdview() {
+	file="$1"
+	view_dir="$HOME/.mdview-temp"
+	[[ -z "$file" ]] && echo "Usage: mdview <file.md>" && return 1
+	mkdir -p "$view_dir"
+	cp "$file" "$view_dir/README.md"
+	cp -r "$HOME/.mdview-template/index.html" "$view_dir/index.html"
+	(cd "$view_dir" && live-server --quiet --open=index.html > /dev/null 2>&1 &)
+}
+
+# Run make from any subdir  
+# Usage: make build
+make() {
+	local dir="$PWD"
+	while [ ! -f "Makefile" ] && [ "$PWD" != "/" ]; do cd ..; done
+	[[ -f "Makefile" ]] && command make "$@" || echo "❌ No Makefile found."
+	cd "$dir"
+}

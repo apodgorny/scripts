@@ -197,3 +197,27 @@ function vnv() {
 	esac
 }
 
+################
+
+# Smart python wrapper: uses vnvpy if exists, else python3.11
+python() {
+	if command -v vnvpy >/dev/null 2>&1; then
+		vnvpy "$@"
+	else
+		python3.11 "$@"
+	fi
+}
+
+# Smart pip wrapper: uses vnvpip if exists, else pip3.11
+pip() {
+	if command -v vnvpip >/dev/null 2>&1; then
+		vnvpip "$@"
+	else
+		pip3.11 "$@"
+	fi
+}
+
+# Shorthand py for python
+py() { python "$@"; }
+
+

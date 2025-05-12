@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HOOKS_DIR="$HOME/.git-hooks"
+
+echo "🔹 Setting up global Git hooks..."
+echo "📁 Script location: $SCRIPT_DIR"
+
+# Ensure the hooks directory exists
+mkdir -p "$HOOKS_DIR"
+
+# Copy and set up hooks
+for hook in pre-push pre-commit; do
+    if [[ -f "$SCRIPT_DIR/$hook" ]]; then
+        cp "$SCRIPT_DIR/$hook" "$HOOKS_DIR/$hook"
+        chmod +x "$HOOKS_DIR/$hook"
+        echo "✅ Installed and made $hook executable"
+    else
+        echo "⚠️ Warning: $hook not found in $SCRIPT_DIR. Skipping."
+    fi
+done
+
+# Set Git to use this directory for hooks
+git config --global core.hooksPath "$HOOKS_DIR"
+echo "✅ Global Git hooks directory set to $HOOKS_DIR"
+
+echo "🎉 Installation complete!"
