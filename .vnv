@@ -1,0 +1,159 @@
+# 💡 Universal VNV with strict python-pip safety
+
+export VNV_PATH="$HOME/vnv"
+
+function vnv_activate() {
+	if [ -d "$1" ] && [ -f "$1/bin/activate" ]; then
+		if [[ "$VIRTUAL_ENV" == "$1" ]]; then
+			echo "✅ Already using $(basename $VIRTUAL_ENV)"
+			return 0
+		fi
+		[[ -n "$VIRTUAL_ENV" ]] && vnv_deactivate
+		source "$1/bin/activate"
+		alias vnvpy="$VIRTUAL_ENV/bin/python"
+		alias vnvpip="$VIRTUAL_ENV/bin/pip"
+		echo "✅ Activated $(basename $VIRTUAL_ENV) with $(vnvpy --version)"
+	else
+		echo "[❌] Environment '$1' does not exist or is invalid."
+		return 1
+	fi
+}
+
+function vnv_deactivate() {
+	if [[ -n "$VIRTUAL_ENV" ]]; then
+		ENV_NAME=$(basename "$VIRTUAL_ENV")
+		unalias vnvpip 2>/dev/null
+		unalias vnvpy 2>/dev/null
+		deactivate 2>/dev/null
+		echo "❎ Deactivated $ENV_NAME and removed aliases."
+	fi
+}
+
+function vnv_create() {
+	mkdir -p "$VNV_PATH"
+	$2 -m venv "$VNV_PATH/$1"
+	vnv_activate "$VNV_PATH/$1"
+	echo "✅ Environment '$1' created at $VNV_PATH/$1."
+}
+
+function vnv_delete() {
+	if [[ -z "$1" ]]; then
+		echo "[❌] Please specify environment name to delete."
+		return 1
+	fi
+	if [ -d "$VNV_PATH/$1" ]; then
+		vnv_deactivate
+		rm -rf "$VNV_PATH/$1"
+		echo "✅ Environment '$1' removed."
+	else
+		echo "[❌] Environment '$1' does not exist."
+	fi
+}
+
+function select_python() {
+	echo "🔍 Available Python versions:"
+	AVAILABLE_PYTHONS=""
+	for ver in 3.15 3.14 3.13 3.12 3.11 3.10 3.9; do
+		if command -v python$ver >/dev/null 2>&1; then
+			PY_PATH=$(command -v python$ver)
+			AVAILABLE_PYTHONS="$AVAILABLE_PYTHONS $ver"
+			echo "  - python$ver → $PY_PATH"
+		fi
+	done
+
+	DEFAULT_VER=$(echo "$AVAILABLE_PYTHONS" | awk '{print $1}')
+
+	if [[ -z "$DEFAULT_VER" ]]; then
+		echo "[❌] No known Python versions found!"
+		return 1
+	fi
+
+	echo -n "Enter the python version (e.g. 3.15), or leave empty for latest [$DEFAULT_VER]: "
+	read -r PYTHON_VER
+	if [[ -z "$PYTHON_VER" ]]; then
+		PYTHON_BIN="python$DEFAULT_VER"
+	else
+		if ! command -v python$PYTHON_VER >/dev/null 2>&1; then
+			echo "[❌] python$PYTHON_VER not found!"
+			return 1
+		fi
+		PYTHON_BIN="python$PYTHON_VER"
+	fi
+
+	echo "✔ Using $($PYTHON_BIN --version) at $(command -v $PYTHON_BIN)"
+}
+
+function vnv_info() {
+	if [[ -n "$VIRTUAL_ENV" ]]; then
+		echo "Environment    : $(basename $VIRTUAL_ENV)"
+		echo "Location       : $VIRTUAL_ENV"
+		echo "Python version : $(vnvpy --version)"
+		echo "Pip version    : $(vnvpip --version)"
+	else
+		echo "No virtual environment is active."
+	fi
+}
+
+function vnv_packages() {
+	if [[ -n "$VIRTUAL_ENV" ]]; then
+		PACKAGES=$("$VIRTUAL_ENV/bin/pip" list --format=freeze | grep -v '^pip==' | grep -v '^setuptools==' | grep -v '^wheel==')
+		if [[ -n "$PACKAGES" ]]; then
+			printf "%-30s %-20s\n" "Package" "Version"
+			printf "%-30s %-20s\n" "------------------------------" "--------------------"
+			echo "$PACKAGES" | awk -F '==' '{printf "%-30s %-20s\n", $1, $2}'
+		else
+			echo "[ℹ️] No installed packages except pip, setuptools, wheel."
+		fi
+	else
+		echo "[❌] No virtual environment is active."
+	fi
+}
+
+function vnv() {
+	case "$1" in
+		"++")
+			select_python || return 1
+			vnv_create "$2" "$PYTHON_BIN"
+			;;
+		"+")
+			vnvpip install "$2"
+			;;
+		"install")
+			vnvpip install -r "$2"
+			;;
+		"--")
+			vnv_delete "$2"
+			;;
+		"-")
+			if [ -n "$2" ]; then
+				vnvpip uninstall -y "$2"
+			else
+				vnv_deactivate
+			fi
+			;;
+		"list")
+			echo "Environments in $VNV_PATH:"
+			ls -1 "$VNV_PATH" | grep -vE '^\s*$'
+			;;
+		"info")
+			vnv_info
+			;;
+		"dump")
+			vnvpip freeze > requirements.txt
+			echo "requirements.txt created."
+			;;
+		"cd")
+			cd "$VNV_PATH/$2"
+			;;
+		"pkg")
+			vnv_packages "$2"
+			;;
+		"")
+			vnv_info
+			;;
+		*)
+			vnv_activate "$VNV_PATH/$1"
+			;;
+	esac
+}
+
