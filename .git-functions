@@ -1,4 +1,6 @@
-# Add, commit and push all changes with a message  
+git config --global core.quotepath false  # Show non-askii filenames as they are instead of /xxx
+
+# Add, commit and push all changes with a message
 # Usage: gitpush "My commit message"
 gitpush() {
   if [[ -z "$1" ]]; then
