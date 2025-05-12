@@ -2,16 +2,47 @@
 
 export VNV_PATH="$HOME/vnv"
 
+function vnv_set_prompt_hook() {
+	# Снимаем старый hook и восстанавливаем PS1, если вдруг остался
+	vnv_remove_prompt_hook
+
+	# Сохраняем текущий prompt (с нуля)
+	export VNV_OLD_PROMPT="$PS1"
+
+	function vnv_update_prompt() {
+		if [[ -n "$VIRTUAL_ENV" ]]; then
+			PS1="${VNV_OLD_PROMPT}"
+			# Убираем всё, что было в виде (xxx) в начале, чтобы избежать дублирования
+			PS1="$(echo "$PS1" | sed -E 's/^\([^)]*\) //')"
+			PS1="($(basename "$VIRTUAL_ENV")) $PS1"
+		else
+			PS1="$VNV_OLD_PROMPT"
+		fi
+	}
+
+	autoload -U add-zsh-hook
+	add-zsh-hook precmd vnv_update_prompt
+}
+
+function vnv_remove_prompt_hook() {
+	if [[ -n "$VNV_OLD_PROMPT" ]]; then
+		PS1="$VNV_OLD_PROMPT"
+		unset VNV_OLD_PROMPT
+	fi
+	add-zsh-hook -d precmd vnv_update_prompt 2>/dev/null
+}
+
 function vnv_activate() {
 	if [ -d "$1" ] && [ -f "$1/bin/activate" ]; then
 		if [[ "$VIRTUAL_ENV" == "$1" ]]; then
 			echo "✅ Already using $(basename $VIRTUAL_ENV)"
 			return 0
 		fi
-		[[ -n "$VIRTUAL_ENV" ]] && vnv_deactivate
+		vnv_deactivate
 		source "$1/bin/activate"
 		alias vnvpy="$VIRTUAL_ENV/bin/python"
 		alias vnvpip="$VIRTUAL_ENV/bin/pip"
+		vnv_set_prompt_hook
 		echo "✅ Activated $(basename $VIRTUAL_ENV) with $(vnvpy --version)"
 	else
 		echo "[❌] Environment '$1' does not exist or is invalid."
@@ -25,7 +56,13 @@ function vnv_deactivate() {
 		unalias vnvpip 2>/dev/null
 		unalias vnvpy 2>/dev/null
 		deactivate 2>/dev/null
-		echo "❎ Deactivated $ENV_NAME and removed aliases."
+		unset VIRTUAL_ENV
+		vnv_remove_prompt_hook
+
+		# 💡 Очищаем всё, что в скобках в начале prompt
+		PS1="$(echo "$PS1" | sed -E 's/^\([^)]*\) //')"
+
+		echo "❎ Deactivated $ENV_NAME and cleaned prompt."
 	fi
 }
 
@@ -138,7 +175,10 @@ function vnv() {
 		"info")
 			vnv_info
 			;;
-		"dump")
+		"?")
+			vnv_info
+			;;
+		"freeze")
 			vnvpip freeze > requirements.txt
 			echo "requirements.txt created."
 			;;
