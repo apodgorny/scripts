@@ -1,5 +1,15 @@
 # 💡 Universal VNV with strict python-pip safety
 
+# Get rid of PYENV
+# if [[ -z "$VNV_CLEANED" ]]; then
+# 	export PYENV_SHELL_DISABLE_PROMPT=1
+# 	export VNV_CLEANED=1
+# 	unset PYENV_VIRTUAL_ENV
+# 	unset VIRTUAL_ENV
+# 	exec zsh
+# fi
+
+
 export VNV_PATH="$HOME/vnv"
 
 function vnv_set_prompt_hook() {
@@ -9,11 +19,24 @@ function vnv_set_prompt_hook() {
 	# Сохраняем текущий prompt (с нуля)
 	export VNV_OLD_PROMPT="$PS1"
 
+	# function vnv_update_prompt() {
+	# 	if [[ -n "$VIRTUAL_ENV" ]]; then
+	# 		PS1="${VNV_OLD_PROMPT}"
+	# 		# Убираем всё, что было в виде (xxx) в начале, чтобы избежать дублирования
+	# 		PS1="$(echo "$PS1" | sed -E 's/^\([^)]*\) //')"
+	# 		PS1="($(basename "$VIRTUAL_ENV")) $PS1"
+	# 	else
+	# 		PS1="$VNV_OLD_PROMPT"
+	# 	fi
+	# }
+
 	function vnv_update_prompt() {
 		if [[ -n "$VIRTUAL_ENV" ]]; then
 			PS1="${VNV_OLD_PROMPT}"
-			# Убираем всё, что было в виде (xxx) в начале, чтобы избежать дублирования
-			PS1="$(echo "$PS1" | sed -E 's/^\([^)]*\) //')"
+			# Снимаем всё, что в скобках в начале (многоразовое удаление)
+			while [[ "$PS1" =~ ^\([^)]*\)\  ]]; do
+				PS1="$(echo "$PS1" | sed -E 's/^\([^)]*\) //')"
+			done
 			PS1="($(basename "$VIRTUAL_ENV")) $PS1"
 		else
 			PS1="$VNV_OLD_PROMPT"
@@ -35,15 +58,24 @@ function vnv_remove_prompt_hook() {
 function vnv_activate() {
 	if [ -d "$1" ] && [ -f "$1/bin/activate" ]; then
 		if [[ "$VIRTUAL_ENV" == "$1" ]]; then
-			echo "✅ Already using $(basename $VIRTUAL_ENV)"
+			echo "✅ Already using $(basename "$VIRTUAL_ENV")"
 			return 0
 		fi
 		vnv_deactivate
 		source "$1/bin/activate"
-		alias vnvpy="$VIRTUAL_ENV/bin/python"
-		alias vnvpip="$VIRTUAL_ENV/bin/pip"
+
+		# Определяем функции вместо алиасов
+		function vnvpy()  { "$VIRTUAL_ENV/bin/python" "$@"; }
+		function vnvpip() { "$VIRTUAL_ENV/bin/pip" "$@";    }
+
+		function py()     { vnvpy "$@"  }
+		function python() { vnvpy "$@"  }
+		function pip()    { vnvpip "$@" }
+
+		# Prompt hook
 		vnv_set_prompt_hook
-		echo "✅ Activated $(basename $VIRTUAL_ENV) with $(vnvpy --version)"
+
+		echo "✅ Activated $(basename "$VIRTUAL_ENV") with $(vnvpy --version)"
 	else
 		echo "[❌] Environment '$1' does not exist or is invalid."
 		return 1
@@ -53,18 +85,16 @@ function vnv_activate() {
 function vnv_deactivate() {
 	if [[ -n "$VIRTUAL_ENV" ]]; then
 		ENV_NAME=$(basename "$VIRTUAL_ENV")
-		unalias vnvpip 2>/dev/null
-		unalias vnvpy 2>/dev/null
+		unset -f vnvpy vnvpip python py pip 2>/dev/null
+		vnv_remove_prompt_hook
 		deactivate 2>/dev/null
 		unset VIRTUAL_ENV
-		vnv_remove_prompt_hook
-
-		# 💡 Очищаем всё, что в скобках в начале prompt
 		PS1="$(echo "$PS1" | sed -E 's/^\([^)]*\) //')"
 
 		echo "❎ Deactivated $ENV_NAME and cleaned prompt."
 	fi
 }
+
 
 function vnv_create() {
 	mkdir -p "$VNV_PATH"
@@ -196,28 +226,3 @@ function vnv() {
 			;;
 	esac
 }
-
-################
-
-# Smart python wrapper: uses vnvpy if exists, else python3.11
-python() {
-	if command -v vnvpy >/dev/null 2>&1; then
-		vnvpy "$@"
-	else
-		python3.11 "$@"
-	fi
-}
-
-# Smart pip wrapper: uses vnvpip if exists, else pip3.11
-pip() {
-	if command -v vnvpip >/dev/null 2>&1; then
-		vnvpip "$@"
-	else
-		pip3.11 "$@"
-	fi
-}
-
-# Shorthand py for python
-py() { python "$@"; }
-
-
