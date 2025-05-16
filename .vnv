@@ -34,7 +34,7 @@ function vnv_set_prompt_hook() {
 		if [[ -n "$VIRTUAL_ENV" ]]; then
 			PS1="${VNV_OLD_PROMPT}"
 			# Снимаем всё, что в скобках в начале (многоразовое удаление)
-			while [[ "$PS1" =~ ^\([^)]*\)\  ]]; do
+			while [[ "$PS1" =~ '^\([^)]*\)\ ' ]]; do
 				PS1="$(echo "$PS1" | sed -E 's/^\([^)]*\) //')"
 			done
 			PS1="($(basename "$VIRTUAL_ENV")) $PS1"

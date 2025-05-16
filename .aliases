@@ -14,4 +14,8 @@ alias ~='cd ~'
 alias run="source ~/.zshrc"       
 
 # Edit shell config in Sublime  
-alias edit="subl ~/.zshrc"        
+alias edit="subl ~/.zshrc"
+
+alias python="python3"
+alias py="python3"
+alias pip="pip3"
