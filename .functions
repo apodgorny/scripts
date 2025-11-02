@@ -1,6 +1,6 @@
 # Open VSCode in current directory  
 # Usage: code .
-code() { VSCODE_CWD="$PWD" open -n -b "com.microsoft.VSCode" --args "$@" ;}
+# code() { VSCODE_CWD="$PWD" open -n -b "com.microsoft.VSCode" --args "$@" ;}
 
 # Show PATH line by line, sorted  
 # Usage: path

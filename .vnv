@@ -1,39 +1,43 @@
-# 💡 Universal VNV with strict python-pip safety
-
-# Get rid of PYENV
-# if [[ -z "$VNV_CLEANED" ]]; then
-# 	export PYENV_SHELL_DISABLE_PROMPT=1
-# 	export VNV_CLEANED=1
-# 	unset PYENV_VIRTUAL_ENV
-# 	unset VIRTUAL_ENV
-# 	exec zsh
-# fi
-
+# 💡 Universal VNV 2.0 — strict python-pip safety, aliases & functions
 
 export VNV_PATH="$HOME/vnv"
 
+function vnv_run_config() {
+	if [[ -n "$VIRTUAL_ENV" ]]; then
+		local ENV_NAME="$(basename "$VIRTUAL_ENV")"
+		local CONFIG_FILE="$VNV_PATH/$ENV_NAME/config.sh"
+		if [[ -f "$CONFIG_FILE" ]]; then
+			source "$CONFIG_FILE"
+			echo "⚙️  Loaded config for $ENV_NAME"
+		fi
+	fi
+}
+
+function vnv_make_config() {
+	if [[ -z "$VIRTUAL_ENV" ]]; then
+		echo "[❌] No virtual environment is active. Activate one first."
+		return 1
+	fi
+
+	local ENV_NAME="$(basename "$VIRTUAL_ENV")"
+	local CONFIG_FILE="$VNV_PATH/$ENV_NAME/config.sh"
+
+	mkdir -p "$(dirname "$CONFIG_FILE")"
+	if [[ ! -f "$CONFIG_FILE" ]]; then
+		echo "#!/usr/bin/env bash" > "$CONFIG_FILE"
+		echo "# VNV per-environment configuration for '$ENV_NAME'" >> "$CONFIG_FILE"
+	fi
+
+	code "$CONFIG_FILE"
+}
+
 function vnv_set_prompt_hook() {
-	# Снимаем старый hook и восстанавливаем PS1, если вдруг остался
 	vnv_remove_prompt_hook
-
-	# Сохраняем текущий prompt (с нуля)
 	export VNV_OLD_PROMPT="$PS1"
-
-	# function vnv_update_prompt() {
-	# 	if [[ -n "$VIRTUAL_ENV" ]]; then
-	# 		PS1="${VNV_OLD_PROMPT}"
-	# 		# Убираем всё, что было в виде (xxx) в начале, чтобы избежать дублирования
-	# 		PS1="$(echo "$PS1" | sed -E 's/^\([^)]*\) //')"
-	# 		PS1="($(basename "$VIRTUAL_ENV")) $PS1"
-	# 	else
-	# 		PS1="$VNV_OLD_PROMPT"
-	# 	fi
-	# }
 
 	function vnv_update_prompt() {
 		if [[ -n "$VIRTUAL_ENV" ]]; then
 			PS1="${VNV_OLD_PROMPT}"
-			# Снимаем всё, что в скобках в начале (многоразовое удаление)
 			while [[ "$PS1" =~ '^\([^)]*\)\ ' ]]; do
 				PS1="$(echo "$PS1" | sed -E 's/^\([^)]*\) //')"
 			done
@@ -63,16 +67,21 @@ function vnv_activate() {
 		fi
 		vnv_deactivate
 		source "$1/bin/activate"
+		vnv_run_config
 
-		# Определяем функции вместо алиасов
-		function vnvpy()  { "$VIRTUAL_ENV/bin/python" "$@"; }
-		function vnvpip() { "$VIRTUAL_ENV/bin/pip" "$@";    }
+		alias py      >/dev/null 2>&1 && alias py      >| "$VNV_PATH/.alias_py"
+		alias python  >/dev/null 2>&1 && alias python  >| "$VNV_PATH/.alias_python"
+		alias pip     >/dev/null 2>&1 && alias pip     >| "$VNV_PATH/.alias_pip"
 
-		function py()     { vnvpy "$@"  }
-		function python() { vnvpy "$@"  }
-		function pip()    { vnvpip "$@" }
+		unalias py python pip 2>/dev/null
 
-		# Prompt hook
+		alias py="$VIRTUAL_ENV/bin/python"
+		alias python="$VIRTUAL_ENV/bin/python"
+		alias pip="$VIRTUAL_ENV/bin/pip"
+
+		vnvpy()  { "$VIRTUAL_ENV/bin/python" "$@"; }
+		vnvpip() { "$VIRTUAL_ENV/bin/pip"    "$@"; }
+
 		vnv_set_prompt_hook
 
 		echo "✅ Activated $(basename "$VIRTUAL_ENV") with $(vnvpy --version)"
@@ -85,7 +94,12 @@ function vnv_activate() {
 function vnv_deactivate() {
 	if [[ -n "$VIRTUAL_ENV" ]]; then
 		ENV_NAME=$(basename "$VIRTUAL_ENV")
-		unset -f vnvpy vnvpip python py pip 2>/dev/null
+		unset -f vnvpy vnvpip 2>/dev/null
+
+		[ -f "$VNV_PATH/.alias_py" ]     && source "$VNV_PATH/.alias_py"     && rm "$VNV_PATH/.alias_py"
+		[ -f "$VNV_PATH/.alias_python" ] && source "$VNV_PATH/.alias_python" && rm "$VNV_PATH/.alias_python"
+		[ -f "$VNV_PATH/.alias_pip" ]    && source "$VNV_PATH/.alias_pip"    && rm "$VNV_PATH/.alias_pip"
+
 		vnv_remove_prompt_hook
 		deactivate 2>/dev/null
 		unset VIRTUAL_ENV
@@ -94,7 +108,6 @@ function vnv_deactivate() {
 		echo "❎ Deactivated $ENV_NAME and cleaned prompt."
 	fi
 }
-
 
 function vnv_create() {
 	mkdir -p "$VNV_PATH"
@@ -202,10 +215,11 @@ function vnv() {
 			echo "Environments in $VNV_PATH:"
 			ls -1 "$VNV_PATH" | grep -vE '^\s*$'
 			;;
-		"info")
-			vnv_info
-			;;
-		"?")
+		"info" | "?" | "")
+			if [[ -n "$VIRTUAL_ENV" ]]; then
+				typeset -f vnvpy  >/dev/null 2>&1 || vnvpy()  { "$VIRTUAL_ENV/bin/python" "$@"; }
+				typeset -f vnvpip >/dev/null 2>&1 || vnvpip() { "$VIRTUAL_ENV/bin/pip"    "$@"; }
+			fi
 			vnv_info
 			;;
 		"freeze")
@@ -218,11 +232,40 @@ function vnv() {
 		"pkg")
 			vnv_packages "$2"
 			;;
-		"")
-			vnv_info
+		"config")
+			vnv_make_config
 			;;
+
 		*)
 			vnv_activate "$VNV_PATH/$1"
 			;;
 	esac
 }
+
+# Auto reapply prompt if VIRTUAL_ENV is set on terminal reload
+if [[ -n "$VIRTUAL_ENV" ]]; then
+	vnv_set_prompt_hook
+fi
+
+# 🛡️ Self-Healing: reapply aliases if env is active
+if [[ -n "$VIRTUAL_ENV" ]]; then
+	current_py="$(alias py 2>/dev/null | sed -E "s/alias py='(.*)'/\1/")"
+	expected_py="$VIRTUAL_ENV/bin/python"
+
+	if [[ "$current_py" != "$expected_py" ]]; then
+		# Reapply venv-specific aliases
+		unalias py python pip 2>/dev/null
+
+		alias py="$expected_py"
+		alias python="$expected_py"
+		alias pip="$VIRTUAL_ENV/bin/pip"
+
+		# Ensure vnvpy and vnvpip functions are alive
+		typeset -f vnvpy  >/dev/null 2>&1 || vnvpy()  { "$expected_py" "$@"; }
+		typeset -f vnvpip >/dev/null 2>&1 || vnvpip() { "$VIRTUAL_ENV/bin/pip" "$@"; }
+
+		echo "✅ Restored py/python/pip for active env: $(basename "$VIRTUAL_ENV")"
+	fi
+fi
+
+
