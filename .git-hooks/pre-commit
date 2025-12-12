@@ -1,13 +1,14 @@
 #!/bin/bash
 
 branch=$(git rev-parse --abbrev-ref HEAD)
+repo=$(basename "$(git rev-parse --show-toplevel)")
 
 if [[ "$branch" == "main" || "$branch" == "master" ]]; then
-    echo "⚠️  You are committing to '$branch'."
+    echo "⚠️  You are committing to '$branch' in repo '$repo'."
     echo -n "Are you sure? (y/n): " > /dev/tty
-    read confirm < /dev/tty  # Forces input from actual terminal
+    read confirm < /dev/tty
     if [[ "$confirm" != "y" ]]; then
-        echo "🚫 Push aborted."
+        echo "🚫 Commit aborted."
         exit 1
     fi
 fi

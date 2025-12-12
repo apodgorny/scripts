@@ -197,9 +197,11 @@ function vnv() {
 			;;
 		"+")
 			vnvpip install "$2"
+            vnv freeze
 			;;
 		"install")
 			vnvpip install -r "$2"
+            vnv freeze
 			;;
 		"--")
 			vnv_delete "$2"
@@ -207,6 +209,7 @@ function vnv() {
 		"-")
 			if [ -n "$2" ]; then
 				vnvpip uninstall -y "$2"
+                vnv freeze
 			else
 				vnv_deactivate
 			fi
@@ -224,7 +227,7 @@ function vnv() {
 			;;
 		"freeze")
 			vnvpip freeze > requirements.txt
-			echo "requirements.txt created."
+			echo "requirements.txt updated."
 			;;
 		"cd")
 			cd "$VNV_PATH/$2"

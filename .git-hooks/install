@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Detect forbidden invocation via `source`
+# If script is sourced, $BASH_SOURCE[0] != $0
+if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
+    echo "❌ This script must be run with 'bash install', not 'source install'"
+    return 1 2>/dev/null || exit 1
+fi
+
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HOOKS_DIR="$HOME/.git-hooks"
