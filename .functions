@@ -104,40 +104,84 @@ make() {
 	cd "$dir"
 }
 
-# 
+######################################################################
+# COPY INTO KB BUFFER:
+# USAGE: cptxt src node_modules .git secrets.env build/output.log
+######################################################################
 cptxt() {
-    # Check if a directory was provided
-    local target_dir="${1:-.}"
-    local separator="######################################################################"
+    # --- FORCE UTF-8 ---
+    export LANG=C.UTF-8
+    export LC_ALL=C.UTF-8
+    export LC_CTYPE=C.UTF-8
 
-    # Detect the clipboard tool
-    local clip_cmd
-    if command -v pbcopy >/dev/null; then
-        clip_cmd="pbcopy" # macOS
-    elif [ -n "$WAYLAND_DISPLAY" ] && command -v wl-copy >/dev/null; then
-        clip_cmd="wl-copy" # Linux (Wayland)
-    elif [ -n "$DISPLAY" ] && command -v xclip >/dev/null; then
-        clip_cmd="xclip -selection clipboard" # Linux (X11)
-    else
-        echo "Error: No clipboard utility found (xclip, wl-copy, or pbcopy)." >&2
+    local root="${1:-.}"
+    shift
+
+    local separator="######################################################################"
+    local excludes=("$@")
+
+    is_excluded() {
+        local rel="$1"
+        local name
+        name="$(basename "$rel")"
+
+        # Exclude if ANY path segment starts with . or _
+        if [[ "$rel" == .* || "$rel" == _* || "$rel" == */.* || "$rel" == */_* ]]; then
+            return 0
+        fi
+
+        for ex in "${excludes[@]}"; do
+            if [[ "$rel" == "$ex" || "$rel" == "$ex/"* || "$name" == "$ex" ]]; then
+                return 0
+            fi
+        done
+        return 1
+    }
+
+    (
+        find "$root" -type f | while read -r file; do
+            local rel
+            rel="$(realpath --relative-to="$root" "$file" 2>/dev/null || echo "$file")"
+
+            if is_excluded "$rel"; then
+                # printf 'EXCLUDE: %s\n' "$rel" >&2
+                continue
+            fi
+
+            printf '[+] %s\n' "$rel" >&2
+
+            local full_path
+            full_path="$(realpath "$file")"
+
+            printf '\n%s\n%s\n%s\n\n' \
+                "$separator" \
+                "$full_path" \
+                "$separator"
+
+            cat "$file"
+            printf '\n'
+        done
+    ) | pbcopy -Prefer rtf
+
+    echo "Recursive collection complete. Clipboard updated."
+}
+
+######################################################################
+# Replace all text within files in given dir
+######################################################################
+replace() {
+    local current_dir="$1"
+    local str_from="$2"
+    local str_to="$3"
+
+    # Check if all 3 arguments are provided
+    if [[ -z "$current_dir" || -z "$str_from" || -z "$str_to" ]]; then
+        echo "Usage: replace <directory> <search_string> <replace_string>"
         return 1
     fi
 
-    # Process files and pipe to clipboard
-    find "$target_dir" -type f | while read -r file; do
-        # Get absolute path
-        local full_path
-        full_path=$(realpath "$file")
-        
-        echo ""
-        echo "$separator"
-        echo "$full_path"
-        echo "$separator"
-        echo ""
-        cat "$file"
-        echo ""
-    done | eval "$clip_cmd"
-
-    echo "Recursive concatenation complete. Content copied to clipboard."
+    # Use find to locate files and sed for in-place replacement
+    # Using double quotes for sed to allow variable interpolation
+    find "$current_dir" -type f -print0 | xargs -0 sed -i "" "s/${str_from}/${str_to}/g"
 }
 
