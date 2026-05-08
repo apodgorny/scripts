@@ -7,9 +7,19 @@ gitpush() {
     echo "Usage: gitpush 'commit message'"
     return 1
   fi
+
   git add --all
-  git commit -m "$1"
-  git push
+
+  if ! git commit -m "$1"; then
+    echo "❌ Commit was not created."
+    return 1
+  fi
+
+  if ! git push; then
+    echo "❌ Push failed."
+    return 1
+  fi
+
   echo "✅ Changes pushed to remote."
 }
 

@@ -15,12 +15,14 @@ alias run="source ~/.zshrc"
 
 # Edit shell config in Sublime  
 alias edit="subl ~/.zshrc"
-alias edita="subl ~/scripts/.aliases"
-alias editf="subl ~/scripts/.functions"
-alias editg="subl ~/scripts/.git-functions"
-alias editc="subl ~/scripts/.common"
-alias editv="subl ~/scripts/.vnv"
+alias editall="subl ~/scripts/"
 
 alias python="python3"
 alias py="python3"
 alias pip="pip3"
+
+alias o="cd ~/dev/o"
+alias a="cd ~/dev/almasi"
+alias do="cd ~/dev/do"
+alias yo="cd ~/dev/yo"
+alias dev="cd ~/dev"
