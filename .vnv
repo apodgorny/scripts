@@ -195,9 +195,8 @@ function vnv() {
 			select_python || return 1
 			vnv_create "$2" "$PYTHON_BIN"
 			;;
-		"+")
-			vnvpip install "$2"
-            vnv freeze
+		'+')
+			vnvpip install ${@:2} && vnv freeze
 			;;
 		"install")
 			vnvpip install -r "$2"
