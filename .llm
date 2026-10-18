@@ -1,0 +1,123 @@
+# ======================================================================
+# LLM
+# ======================================================================
+
+function llm_get_running_models() {
+	ollama ps | awk 'NR > 1 && $1 != "" {print $1}'
+}
+
+function llm_get_models() {
+	ollama list | awk 'NR > 1 && $1 != "" {print $1}'
+}
+
+function llm_select_lines() {
+	local lines
+	local selected_id
+	local count
+	local selected
+
+	lines="$(cat)"
+	count="$(printf '%s\n' "$lines" | awk 'NF {count++} END {print count + 0}')"
+
+	if [[ "$count" = "0" ]]; then
+		return 1
+	fi
+
+	printf '%s\n' "$lines" | awk '{print NR ") " $0}' >&2
+
+	printf 'Select [1-%s]: ' "$count" >&2
+	read -r selected_id < /dev/tty
+
+	selected="$(printf '%s\n' "$lines" | awk -v selected_id="$selected_id" 'NR == selected_id {print}')"
+
+	if [[ -z "$selected" ]]; then
+		echo "[🔴] Invalid choice" >&2
+		return 1
+	fi
+
+	echo "$selected"
+}
+
+function llm_select_model() {
+	local model
+
+	if [[ -z "$(llm_get_models)" ]]; then
+		echo "[🔴] No Ollama models found"
+		return 1
+	fi
+
+	model="$(llm_get_models | llm_select_lines)" || return 1
+	echo "$model"
+}
+
+
+function llm_kill_model() {
+	local running_models
+	local model
+	local count
+
+	running_models="$(llm_get_running_models)"
+
+	if [[ -z "$running_models" ]]; then
+		echo "No model is running"
+		return 0
+	fi
+
+	count="$(printf '%s\n' "$running_models" | wc -l | tr -d ' ')"
+
+	if [[ "$count" = "1" ]]; then
+		model="$running_models"
+	else
+		model="$(printf '%s\n' "$running_models" | llm_select_lines)" || return 1
+	fi
+
+	ollama stop "$model" > /dev/null
+	echo "🔴 Stopped $model"
+}
+
+function llm_running_menu() {
+	local selected_id
+
+	echo "🟢 Running:"
+	echo "------------------------------------------------------------"
+	ollama ps
+	echo "------------------------------------------------------------"
+	echo "1) kill"
+	echo "2) keep alive"
+	printf 'Select [1-2]: '
+	read -r selected_id < /dev/tty
+	echo "------------------------------------------------------------"
+
+	if [[ "$selected_id" = "1" ]]; then
+		llm_kill_model
+	elif [[ "$selected_id" = "2" ]]; then
+		echo "🟢 Continue running"
+	else
+		echo "[🔴] Invalid choice"
+		return 1
+	fi
+	echo "------------------------------------------------------------"
+}
+
+function llm() {
+	local running_models
+	local model
+
+	running_models="$(llm_get_running_models)"
+
+	echo "------------------------------------------------------------"
+
+	if [[ -n "$running_models" ]]; then
+		llm_running_menu
+	else
+		model="$(llm_select_model)" || return 1
+		curl -fsS http://localhost:11434/api/generate \
+			-d '{"model":"'"$model"'","prompt":"","keep_alive":-1}' \
+			> /dev/null
+
+		echo "------------------------------------------------------------"
+		echo "🟢 Running $model"
+		echo "------------------------------------------------------------"
+		ollama ps
+	fi
+}

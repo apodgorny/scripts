@@ -1,26 +1,42 @@
-# List files, directories, executables  
+# List files, directories, executables
+# ----------------------------------------------------------------------
 alias ll='ls -laht'               # List all files in long format, including hidden  
 alias ld='ls -lAh | grep "^d"'    # List only directories  
 alias lf='ls -lAh | grep "^-" '   # List only regular files  
 alias lx='ls -lAh | grep "^-..x"' # List only executables  
 
-# Move up directories  
+# Move up directories
+# ----------------------------------------------------------------------
 alias ..='cd ..'                  # Go up one level  
 alias ...='cd ../..'              # Go up two levels  
 alias ....='cd ../../..'          # Go up three levels  
 alias ~='cd ~'
+md() {
+    mkdir -p "$1" && cd "$1"
+}
 
-# Restart shell (reload zshrc)  
+# Restart shell (reload zshrc)
+# ----------------------------------------------------------------------
 alias run="source ~/.zshrc"       
 
 # Edit shell config in Sublime  
+# ----------------------------------------------------------------------
 alias edit="subl ~/.zshrc"
 alias editall="subl ~/scripts/"
 
-alias python="python3"
-alias py="python3"
-alias pip="pip3"
+# Python
+# ----------------------------------------------------------------------
+alias py='python'
+alias pip='python -m pip'
 
+# Node
+# ----------------------------------------------------------------------
+alias mcp='/Users/alexander/.nvm/versions/node/v24.22.0/bin/node /Users/alexander/.nvm/versions/node/v24.22.0/lib/node_modules/@modelcontextprotocol/inspector/clients/launcher/build/index.js'
+
+
+# Dev
+# ----------------------------------------------------------------------
+alias k="cd ~/Documents/Knowledge"
 alias o="cd ~/dev/o"
 alias a="cd ~/dev/almasi"
 alias do="cd ~/dev/do"

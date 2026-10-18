@@ -23,6 +23,74 @@ gitpush() {
   echo "✅ Changes pushed to remote."
 }
 
+all_repos=(
+  ~/dev/almasi
+  ~/dev/o
+  ~/dev/do
+  ~/dev/yo
+)
+
+# Add, commit and push all core repos with the same message
+# Usage: gitpushall 'My commit message'
+gitpushall() {
+  local message=$*
+  local result=0
+
+  if [[ -z ${message} ]]; then
+    echo 'Usage: gitpushall <commit message>'
+    result=1
+  else
+    for repo in ${all_repos}; do
+      local repo_result=0
+      local repo_name=${repo:t}
+      local answer
+
+      echo
+      print -r -- '→' ${repo}
+
+      if [[ ! -d ${repo}/.git ]]; then
+        print -r -- '❌ Git repository not found:' ${repo}
+        repo_result=1
+      else
+        read -r "answer?commit to ${repo_name}?: "
+
+        if [[ ${answer} == y ]]; then
+          git -C ${repo} add --all
+
+          if [[ -n $(git -C ${repo} status --porcelain) ]]; then
+            if ! git -C ${repo} commit --no-verify -m ${message}; then
+              print -r -- '❌ Commit failed:' ${repo}
+              repo_result=1
+            fi
+          else
+            echo 'No changes to commit.'
+          fi
+
+          if [[ ${repo_result} == 0 ]]; then
+            if ! git -C ${repo} push --no-verify; then
+              print -r -- '❌ Push failed:' ${repo}
+              repo_result=1
+            fi
+          fi
+        else
+          print -r -- 'Skipped' ${repo_name}
+        fi
+      fi
+
+      if [[ ${repo_result} != 0 ]]; then
+        result=1
+      fi
+    done
+  fi
+
+  if [[ ${result} == 0 ]]; then
+    echo
+    echo '✅ All repos pushed.'
+  fi
+
+  return ${result}
+}
+
 # Open the current Git repository in browser (GitHub, GitLab, etc.)  
 # Usage: gitopen [optional_path]
 gitopen() {
