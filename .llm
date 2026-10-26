@@ -1,3 +1,6 @@
+typeset _llm_aliases_enabled=${options[aliases]}
+unsetopt aliases
+
 # ======================================================================
 # LLM
 # ======================================================================
@@ -121,3 +124,95 @@ function llm() {
 		ollama ps
 	fi
 }
+# Check configured models using the current environment credentials.
+# ----------------------------------------------------------------------
+llmping() {
+	local models_file=~/scripts/models.txt
+	local result=0
+	local line provider model key url payload response body code elapsed answer state curl_result
+	local -a entries models headers
+
+	if [[ -r ${models_file} ]] && command -v curl >/dev/null && command -v jq >/dev/null; then
+		while IFS= read -r line || [[ -n ${line} ]]; do
+			entries=(${=line%%#*})
+			if (( ${#entries} )); then
+				if (( ${#entries} == 2 )) && [[ ${entries[1]} == (gemini|local|cloud) ]]; then
+					models+=(${entries[1]} ${entries[2]})
+				else
+					print -r -- 'Invalid models.txt entry: '${line} >&2
+					result=1
+				fi
+			fi
+		done < ${models_file}
+
+		if (( result == 0 )); then
+			printf '%-10s %-34s %-16s %8s  %s\n' PROVIDER MODEL STATUS SECONDS 'RESPONSE / ERROR'
+			while (( ${#models} )); do
+				provider=${models[1]}
+				model=${models[2]}
+				models[1,2]=()
+				headers=(-H 'Content-Type: application/json')
+				key=''
+				if [[ ${provider} == gemini ]]; then
+					key=${GEMINI_API_KEY:-${GOOGLE_API_KEY-}}
+					url=https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent
+					headers+=(-H x-goog-api-key:${key})
+					payload='{"contents":[{"parts":[{"text":"Reply with exactly PONG"}]}],"generationConfig":{"maxOutputTokens":1024}}'
+				else
+					url=${OLLAMA_HOST:-http://localhost:11434}/api/chat
+					if [[ ${provider} == cloud ]]; then
+						key=${OLLAMA_API_KEY-}
+						url=https://ollama.com/api/chat
+						headers+=(-H 'Authorization: Bearer '${key})
+					fi
+					payload=$(jq -cn --arg model ${model} '{model:$model,messages:[{role:"user",content:"Reply with exactly PONG"}],stream:false,options:{num_predict:32}}')
+				fi
+
+				state=NO_KEY
+				answer='Missing provider API key'
+				elapsed=0
+				if [[ ${provider} == local || -n ${key} ]]; then
+					curl_result=0
+					response=$(curl --disable -sS --connect-timeout 10 --max-time 30 ${headers} --data-binary ${payload} -w $'\n%{http_code}\n%{time_total}' ${url} 2>&1) || curl_result=$?
+						elapsed=${response##*$'\n'}
+						body=${response%$'\n'*}
+						code=${body##*$'\n'}
+						body=${body%$'\n'*}
+						if (( curl_result == 0 )); then
+							if [[ ${code} == 2[0-9][0-9] ]]; then
+								if answer=$(print -r -- ${body} | jq -er 'if .candidates then [.candidates[]?.content.parts[]?.text // empty] | join(" ") else .message.content // "" end' 2>/dev/null); then
+									state=OK
+									if [[ -z ${answer//[[:space:]]/} ]]; then
+										state=EMPTY
+										answer=$(print -r -- ${body} | jq -r '.promptFeedback.blockReason // .candidates[0].finishReason // "No text response"')
+									fi
+								else
+									state=INVALID_RESPONSE
+									answer='Invalid provider response'
+								fi
+							else
+								state=HTTP_${code}
+								answer=${body}
+							fi
+					else
+						state=UNAVAILABLE
+						if (( curl_result == 28 )); then
+							state=TIMEOUT
+						fi
+						answer=${body}
+					fi
+				fi
+				answer=${answer//$'\n'/ }
+				printf '%-10s %-34s %-16s %8s  %s\n' ${provider} ${model} ${state} ${elapsed} ${answer[1,160]}
+			done
+		fi
+	else
+		print -r -- 'llmping requires curl, jq and ~/scripts/models.txt' >&2
+		result=1
+	fi
+
+	return ${result}
+}
+
+[[ ${_llm_aliases_enabled} == on ]] && setopt aliases
+unset _llm_aliases_enabled

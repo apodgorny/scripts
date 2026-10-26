@@ -36,9 +36,4 @@ alias mcp='/Users/alexander/.nvm/versions/node/v24.22.0/bin/node /Users/alexande
 
 # Dev
 # ----------------------------------------------------------------------
-alias k="cd ~/Documents/Knowledge"
-alias o="cd ~/dev/o"
-alias a="cd ~/dev/almasi"
-alias do="cd ~/dev/do"
-alias yo="cd ~/dev/yo"
 alias dev="cd ~/dev"
