@@ -553,3 +553,114 @@ git-project() {
 
 	return ${result}
 }
+# Update the bulk list using canonical repository locations.
+# ----------------------------------------------------------------------
+_bgit-repositories() {
+	emulate -L zsh
+	local action=${1}
+	local target=${2-}
+	local repos_file=~/bulk_commit_repos.txt
+	local result=0
+	local found=0
+	local entry resolved temporary label
+	local -a repos
+
+	if (( $# == 2 )) && [[ -n ${target} && ${target} != *[[:cntrl:]]* ]]; then
+		target=${target:A}
+		if [[ ${action} == add ]]; then
+			if resolved=$(git -C ${target} rev-parse --show-toplevel 2>/dev/null); then
+				target=${resolved:A}
+			else
+				print -r -- 'Not a Git working repository: '${target} >&2
+				result=1
+			fi
+		elif resolved=$(git -C ${target} rev-parse --show-toplevel 2>/dev/null); then
+			target=${resolved:A}
+		fi
+
+		if (( result == 0 )); then
+			if [[ -e ${repos_file} ]]; then
+				if [[ -f ${repos_file} && -r ${repos_file} && ! -L ${repos_file} ]]; then
+					while IFS= read -r entry || [[ -n ${entry} ]]; do
+						entry=${entry%$'\r'}
+						if [[ -n ${entry} ]]; then
+							resolved=${entry}
+							if [[ ${resolved} == '~/'* ]]; then
+								resolved=${HOME}/${resolved#\~/}
+							fi
+							if [[ ${resolved:A} == ${target} ]]; then
+								found=1
+								if [[ ${action} == add ]]; then
+									repos+=(${entry})
+								fi
+							else
+								repos+=(${entry})
+							fi
+						fi
+					done < ${repos_file}
+				else
+					print -r -- 'Bulk list must be a readable regular file, not a symlink.' >&2
+					result=1
+				fi
+			elif [[ -L ${repos_file} ]]; then
+				print -r -- 'Bulk list must not be a symlink.' >&2
+				result=1
+			fi
+		fi
+
+		if (( result == 0 )); then
+			if [[ ${action} == add ]] && (( ! found )); then
+				repos+=(${target})
+				label=added
+			elif [[ ${action} == rm ]] && (( found )); then
+				label=removed
+			else
+				label='already listed'
+				[[ ${action} == rm ]] && label='not listed'
+			fi
+
+			if [[ ${label} == (added|removed) ]]; then
+				if temporary=$(mktemp ${repos_file}.XXXXXXXX); then
+					{
+						if [[ -f ${repos_file} ]]; then
+							cp -p -- ${repos_file} ${temporary} || result=1
+						fi
+						if (( result == 0 )); then
+							if { for entry in ${repos}; do print -r -- ${entry}; done } > ${temporary} && mv -f -- ${temporary} ${repos_file}; then
+								:
+							else
+								result=1
+							fi
+						fi
+					} always {
+						[[ -f ${temporary} ]] && rm -- ${temporary}
+					}
+				else
+					result=1
+				fi
+			fi
+			if (( result == 0 )); then
+				printf '\033[1;33m%s\033[0;90m %s\033[0m\n' ${target:t} ${label}
+			fi
+		fi
+	else
+		print -r -- 'Usage: bgit'${action}' <repository path>' >&2
+		result=1
+	fi
+
+	return ${result}
+}
+
+# Add a repository relative to the current directory, or by absolute location.
+# ----------------------------------------------------------------------
+bgitadd() {
+	_bgit-repositories add $@
+}
+
+# Remove a repository from the bulk list without changing its files.
+# ----------------------------------------------------------------------
+bgitrm() {
+	_bgit-repositories rm $@
+}
+
+alias bgitremove=bgitrm
