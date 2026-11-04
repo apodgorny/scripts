@@ -42,3 +42,14 @@ source ~/scripts/vnv
 - 🗃 Modular: Git, vnv, general tools — separated into clear files.
 - 🧹 Clean environment: No company-specific or sensitive info inside this folder.
 - 🎨 Portable: Can be reused or shared freely.
+
+## Bulk commits
+
+`bgitpush` generates one concise commit subject per changed repository using Codex,
+then commits and pushes in parallel. `bgitpush 'message'` uses the supplied message
+without calling Codex. The third column shows the subject and commit count.
+
+Automatic messages use `gpt-6.1-sol` with low reasoning and a self-contained staged
+snapshot: summary, diff, and complete changed text files. Binary changes and deleted
+files are identified without binary contents. Input is limited to 128 KiB; failures
+leave changes staged. Generation errors include the location of their retained log.
