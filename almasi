@@ -1,0 +1,145 @@
+# Create the native declaration and preserve existing project content.
+# ----------------------------------------------------------------------
+_almasi-scaffold() {
+	emulate -L zsh
+	setopt noclobber
+	local kind=${1}
+	local name=${PWD:t}
+	local result=0
+	local class_name part
+	local -a words
+
+	if [[ ${name} =~ '^[a-z][a-z0-9]*(_[a-z0-9]+)*$' && ${name} != (class|def|import|from|return|if|else|elif|for|while|try|except|finally|with|as|in|is|not|and|or|pass|raise|yield|async|await|lambda|global|nonlocal|assert|del|break|continue) ]]; then
+		words=(${(s:_:)name})
+		for part in ${words}; do
+			class_name+=${(C)part}
+		done
+
+		if mkdir -p -- root; then
+			if [[ ! -e ${name}.py && ! -L ${name}.py ]]; then
+				{
+					printf 'import a, o, do\n\n\nclass %s(a.A):\n' ${class_name}
+					if [[ ${kind} == app ]]; then
+						cat <<'PYTHON'
+
+	# ======================================================================
+	# PUBLIC METHODS
+	# ======================================================================
+
+	# Start application-owned storage before loading domain components.
+	# ----------------------------------------------------------------------
+	def initialize(self):
+		o.start()
+PYTHON
+					else
+						cat <<'PYTHON'
+
+	# ======================================================================
+	# PUBLIC METHODS
+	# ======================================================================
+
+	# Initialize library-owned components when needed.
+	# ----------------------------------------------------------------------
+	def initialize(self):
+		pass
+PYTHON
+					fi
+				} > ${name}.py || result=1
+			fi
+
+			if [[ ${kind} == lib && ${result} == 0 ]]; then
+				if [[ ! -e pyproject.toml && ! -L pyproject.toml ]]; then
+					{
+						cat <<'TOML'
+[build-system]
+requires      = ['setuptools>=80']
+build-backend = 'setuptools.build_meta'
+
+[project]
+TOML
+						printf 'name            = '\''%s'\''\n' ${name}
+						cat <<'TOML'
+version         = '0.1.0'
+requires-python = '>=3.11'
+dependencies    = ['a', 'o', 'do']
+
+[tool.setuptools]
+TOML
+						printf 'py-modules = ['\''%s'\'']\n' ${name}
+					} > pyproject.toml || result=1
+				fi
+				if [[ ! -e install.sh && ! -L install.sh ]]; then
+					cat > install.sh <<'INSTALL'
+#!/bin/zsh
+
+set -e
+cd -- ${0:A:h}
+
+# Use the active environment before considering other interpreters.
+# ----------------------------------------------------------------------
+if [[ -n ${VIRTUAL_ENV-} ]]; then
+	interpreter=${VIRTUAL_ENV}/bin/python
+elif command -v python >/dev/null; then
+	interpreter=$(command -v python)
+elif command -v python3 >/dev/null; then
+	interpreter=$(command -v python3)
+else
+	print -r -- 'Python not found' >&2
+	exit 1
+fi
+
+# Prefer sibling source checkouts for the framework dependencies.
+# ----------------------------------------------------------------------
+for dependency repository in a almasi o o do do; do
+	if ! ${interpreter} -c 'import '${dependency} >/dev/null 2>&1; then
+		if [[ -f ../${repository}/${dependency}.py ]]; then
+			${interpreter} -m pip install -e ../${repository}
+		else
+			${interpreter} -m pip install --editable ${dependency}' @ git+https://github.com/apodgorny/'${repository}'.git'
+		fi
+	fi
+done
+
+${interpreter} -m pip install -e .
+print -r -- ${PWD:t}' installed'
+INSTALL
+					if (( $? == 0 )); then
+						chmod +x install.sh || result=1
+					else
+						result=1
+					fi
+				fi
+			fi
+		else
+			result=1
+		fi
+	else
+		print -r -- 'Use a snake_case folder name that is a valid Python module name.' >&2
+		result=1
+	fi
+
+	return ${result}
+}
+
+# Create a minimal application in the current directory.
+# ----------------------------------------------------------------------
+almasi-app() {
+	_almasi-scaffold app
+}
+
+# Create and install a minimal library in the current directory.
+# ----------------------------------------------------------------------
+almasi-lib() {
+	local result=0
+	if _almasi-scaffold lib; then
+		if [[ -f install.sh && ! -L install.sh ]]; then
+			zsh ./install.sh || result=$?
+		else
+			print -r -- 'install.sh must be a regular file, not a symlink.' >&2
+			result=1
+		fi
+	else
+		result=$?
+	fi
+	return ${result}
+}

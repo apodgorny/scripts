@@ -6,33 +6,35 @@ This directory contains modular, clean, and conflict-free personal shell scripts
 
 | File/Dir         | Purpose                                      |
 |------------------|----------------------------------------------|
-| `.aliases`        | Universal aliases (ls, cd, etc.) — no python, pip, git here |
-| `.colors`         | Shell prompt color scheme and styles        |
-| `.common`         | Common reusable settings (shared utilities) |
-| `.functions`      | Personal functions (video, audio, debug, system) |
-| `.git-functions`  | Git-specific functions (push, open, hooks)   |
-| `.git-hooks`      | Git hooks templates (copied by `git_set_hooks`) |
-| `.vnv`            | VNV manager (env creation, activation, safety wrappers) |
+| `aliases`        | Universal aliases (ls, cd, etc.) — no python, pip, git here |
+| `common`         | Common reusable settings (shared utilities) |
+| `functions`      | Personal functions (video, audio, debug, system) |
+| `git-functions`  | Git-specific functions (push, open, hooks)   |
+| `git-hooks`      | Git hooks templates (copied by `git_set_hooks`) |
+| `vnv`            | VNV manager (env creation, activation, safety wrappers) |
 
 ## Usage
 
 In your `~/.zshrc`:
 
 ```bash
-# Load colors first (for prompt or themes)
-source ~/scripts/.colors
+# Load common shell settings
+source ~/scripts/common
 
 # Load universal aliases
-source ~/scripts/.aliases
+source ~/scripts/aliases
 
 # Load personal functions
-source ~/scripts/.functions
+source ~/scripts/functions
 
 # Load git-specific functions
-source ~/scripts/.git-functions
+source ~/scripts/git-functions
+
+# Load model commands
+source ~/scripts/llm
 
 # Load VNV manager (must be last to override python, pip, etc.)
-source ~/scripts/.vnv
+source ~/scripts/vnv
 ```
 
 ## Philosophy
