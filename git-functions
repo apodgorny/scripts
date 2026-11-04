@@ -386,7 +386,7 @@ git-project() {
 	if (( $# == 1 )) && [[ ${name} =~ '^[A-Za-z0-9][A-Za-z0-9._-]*$' && ${name} != *.git ]]; then
 		if [[ ! -e ${name} && ! -L ${name} ]]; then
 			if command -v gh >/dev/null && command -v git >/dev/null && command -v code >/dev/null; then
-				if gh repo create ${name} --private --gitignore Python --clone && cd -- ${name} && code .; then
+				if gh auth setup-git --hostname github.com && gh repo create ${name} --private --gitignore Python --clone && cd -- ${name} && code .; then
 					result=0
 				else
 					result=$?
