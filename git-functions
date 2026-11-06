@@ -246,7 +246,7 @@ _git-commit-message() {
 bgitpush() {
 	emulate -L zsh
 	unsetopt bg_nice
-	local repos_file=~/bulk_commit_repos.txt
+	local repos_file=~/scripts/repos.txt
 	local message=${1-}
 	local result=0
 	local width=0
@@ -367,7 +367,7 @@ bgitpush() {
 		timestamp=$(date '+%B %-d, %Y at %-I:%M %p %Z')
 		printf '\n\033[0;90m%s\033[0m\n' ${timestamp}
 	else
-		print -r -- 'Usage: bgitpush [commit message] (requires ~/bulk_commit_repos.txt)' >&2
+		print -r -- 'Usage: bgitpush [commit message] (requires ~/scripts/repos.txt)' >&2
 		result=1
 	fi
 
@@ -378,7 +378,7 @@ bgitpush() {
 # ----------------------------------------------------------------------
 bgit() {
 	emulate -L zsh
-	local repos_file=~/bulk_commit_repos.txt
+	local repos_file=~/scripts/repos.txt
 	local result=0
 	local width=0
 	local count_width=6
@@ -422,7 +422,7 @@ bgit() {
 		timestamp=$(date '+%B %-d, %Y at %-I:%M %p %Z')
 		printf '\n\033[0;90m%s\033[0m\n' ${timestamp}
 	else
-		print -r -- 'bgit requires ~/bulk_commit_repos.txt' >&2
+		print -r -- 'bgit requires ~/scripts/repos.txt' >&2
 		result=1
 	fi
 
@@ -434,7 +434,7 @@ bgit() {
 bgitpull() {
 	emulate -L zsh
 	unsetopt bg_nice
-	local repos_file=~/bulk_commit_repos.txt
+	local repos_file=~/scripts/repos.txt
 	local result=0
 	local width=0
 	local count_width=6
@@ -516,7 +516,7 @@ bgitpull() {
 		timestamp=$(date '+%B %-d, %Y at %-I:%M %p %Z')
 		printf '\n\033[0;90m%s\033[0m\n' ${timestamp}
 	else
-		print -r -- 'bgitpull requires ~/bulk_commit_repos.txt' >&2
+		print -r -- 'bgitpull requires ~/scripts/repos.txt' >&2
 		result=1
 	fi
 
@@ -559,7 +559,7 @@ _bgit-repositories() {
 	emulate -L zsh
 	local action=${1}
 	local target=${2-}
-	local repos_file=~/bulk_commit_repos.txt
+	local repos_file=~/scripts/repos.txt
 	local result=0
 	local found=0
 	local entry resolved temporary label
