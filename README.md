@@ -51,5 +51,5 @@ without calling Codex. The third column shows the subject and commit count.
 
 Automatic messages use `gpt-6.1-sol` with low reasoning and a self-contained staged
 snapshot: summary, diff, and complete changed text files. Binary changes and deleted
-files are identified without binary contents. Input is limited to 128 KiB; failures
-leave changes staged. Generation errors include the location of their retained log.
+files are identified without binary contents. Inputs over 128 KiB fall back to a bounded summary of filenames, change types
+and line counts. Generation failures leave changes staged. Generation errors include the location of their retained log.
