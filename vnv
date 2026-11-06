@@ -223,6 +223,24 @@ function vnv() {
 				typeset -f vnvpip >/dev/null 2>&1 || vnvpip() { "$VIRTUAL_ENV/bin/pip"    "$@"; }
 			fi
 			vnv_info
+			if (( $# == 0 )); then
+				printf '\n'
+				cat <<'HELP'
+  vnv <name>       Activate environment
+  vnv ++ <name>    Create environment (choose Python)
+  vnv -- <name>    Delete environment
+  vnv -            Deactivate
+  vnv + <pkg>...   Install packages and freeze
+  vnv - <pkg>      Uninstall package and freeze
+  vnv install <f>  Install requirements file and freeze
+  vnv list         List environments
+  vnv info         Show active environment
+  vnv pkg          List installed packages
+  vnv freeze       Write requirements.txt
+  vnv cd <name>    Enter environment directory
+  vnv config       Edit environment startup config
+HELP
+			fi
 			;;
 		"freeze")
 			vnvpip freeze > requirements.txt
