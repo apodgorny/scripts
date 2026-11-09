@@ -6,42 +6,18 @@ _almasi-scaffold() {
 	local kind=${1}
 	local name=${PWD:t}
 	local result=0
-	local class_name part
-	local -a words
 
 	if [[ ${name} =~ '^[a-z][a-z0-9]*(_[a-z0-9]+)*$' && ${name} != (class|def|import|from|return|if|else|elif|for|while|try|except|finally|with|as|in|is|not|and|or|pass|raise|yield|async|await|lambda|global|nonlocal|assert|del|break|continue) ]]; then
-		words=(${(s:_:)name})
-		for part in ${words}; do
-			class_name+=${(C)part}
-		done
-
 		if mkdir -p -- root; then
 			if [[ ! -e ${name}.py && ! -L ${name}.py ]]; then
 				{
-					printf 'import a, o, do\n\n\nclass %s(a.A):\n' ${class_name}
+					printf 'import a, o, do\n\n\n%s = a.extend('\''%s'\'')\n' ${name} ${name}
 					if [[ ${kind} == app ]]; then
 						cat <<'PYTHON'
 
-	# ======================================================================
-	# PUBLIC METHODS
-	# ======================================================================
-
-	# Start application-owned storage before loading domain components.
-	# ----------------------------------------------------------------------
-	def initialize(self):
-		o.start()
-PYTHON
-					else
-						cat <<'PYTHON'
-
-	# ======================================================================
-	# PUBLIC METHODS
-	# ======================================================================
-
-	# Initialize library-owned components when needed.
-	# ----------------------------------------------------------------------
-	def initialize(self):
-		pass
+# Start application-owned storage before loading domain components.
+# ----------------------------------------------------------------------
+o.start()
 PYTHON
 					fi
 				} > ${name}.py || result=1
