@@ -9,6 +9,17 @@ _almasi-scaffold() {
 
 	if [[ ${name} =~ '^[a-z][a-z0-9]*(_[a-z0-9]+)*$' && ${name} != (class|def|import|from|return|if|else|elif|for|while|try|except|finally|with|as|in|is|not|and|or|pass|raise|yield|async|await|lambda|global|nonlocal|assert|del|break|continue) ]]; then
 		if mkdir -p -- root; then
+			# Keep Finder metadata out of both application and library repositories.
+			# ----------------------------------------------------------------------
+			if [[ ! -L .gitignore && ( ! -e .gitignore || -f .gitignore ) ]]; then
+				if ! command grep -qxF '.DS_Store' .gitignore 2>/dev/null; then
+					printf '\n.DS_Store\n' >> .gitignore || result=1
+				fi
+			else
+				print -r -- '.gitignore must be a regular file, not a symlink.' >&2
+				result=1
+			fi
+
 			if [[ ! -e ${name}.py && ! -L ${name}.py ]]; then
 				{
 					printf 'import a, o, do\n\n\n%s = a.extend('\''%s'\'')\n' ${name} ${name}
