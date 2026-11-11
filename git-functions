@@ -418,7 +418,7 @@ bgit() {
 			repo_name=${${repo%/}:t}
 			files=0
 			color=$'\033[0;90m'
-			if changes=$(git -C ${repo} --no-optional-locks status --porcelain --untracked-files=all 2>/dev/null); then
+			if changes=$(git -C ${repo} --no-optional-locks status --porcelain --untracked-files=no 2>/dev/null); then
 				if [[ -n ${changes} ]]; then
 					entries=(${(f)changes})
 					files=${#entries}
