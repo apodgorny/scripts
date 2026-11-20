@@ -1,6 +1,7 @@
 # List files, directories, executables
 # ----------------------------------------------------------------------
-alias ll='ls -laht'               # List all files in long format, including hidden  
+alias ll='ls -lah'              # List by name, ascending
+alias lt='ls -laht'              # List by modification time, newest first
 alias ld='ls -lAh | grep "^d"'    # List only directories  
 alias lf='ls -lAh | grep "^-" '   # List only regular files  
 alias lx='ls -lAh | grep "^-..x"' # List only executables  

@@ -5,6 +5,7 @@ _almasi-scaffold() {
 	setopt noclobber
 	local kind=${1}
 	local name=${PWD:t}
+	name=${name##*.}
 	local result=0
 
 	if [[ ${name} =~ '^[a-z][a-z0-9]*(_[a-z0-9]+)*$' && ${name} != (class|def|import|from|return|if|else|elif|for|while|try|except|finally|with|as|in|is|not|and|or|pass|raise|yield|async|await|lambda|global|nonlocal|assert|del|break|continue) ]]; then
@@ -13,7 +14,7 @@ _almasi-scaffold() {
 			# ----------------------------------------------------------------------
 			if [[ ! -L .gitignore && ( ! -e .gitignore || -f .gitignore ) ]]; then
 				if ! command grep -qxF '.DS_Store' .gitignore 2>/dev/null; then
-					printf '\n.DS_Store\n' >> .gitignore || result=1
+					printf '\n.DS_Store\n' >>| .gitignore || result=1
 				fi
 			else
 				print -r -- '.gitignore must be a regular file, not a symlink.' >&2
@@ -77,7 +78,7 @@ fi
 
 # Prefer sibling source checkouts for the framework dependencies.
 # ----------------------------------------------------------------------
-for dependency repository in a almasi o o do do; do
+for dependency repository in a almasi o almasi.o do almasi.do; do
 	if ! ${interpreter} -c 'import '${dependency} >/dev/null 2>&1; then
 		if [[ -f ../${repository}/${dependency}.py ]]; then
 			${interpreter} -m pip install -e ../${repository}
@@ -101,7 +102,7 @@ INSTALL
 			result=1
 		fi
 	else
-		print -r -- 'Use a snake_case folder name that is a valid Python module name.' >&2
+		print -r -- 'Use a valid snake_case Python module name after the last dot, or as the whole folder name.' >&2
 		result=1
 	fi
 
@@ -111,7 +112,7 @@ INSTALL
 # Create a minimal application in the current directory.
 # ----------------------------------------------------------------------
 almasi-app() {
-	_almasi-scaffold app
+	_almasi-scaffold app && code --new-window .
 }
 
 # Create and install a minimal library in the current directory.
@@ -120,7 +121,7 @@ almasi-lib() {
 	local result=0
 	if _almasi-scaffold lib; then
 		if [[ -f install.sh && ! -L install.sh ]]; then
-			zsh ./install.sh || result=$?
+			zsh ./install.sh && code --new-window . || result=$?
 		else
 			print -r -- 'install.sh must be a regular file, not a symlink.' >&2
 			result=1

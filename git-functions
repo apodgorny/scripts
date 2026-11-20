@@ -25,9 +25,9 @@ gitpush() {
 
 all_repos=(
   ~/dev/almasi
-  ~/dev/o
-  ~/dev/do
-  ~/dev/yo
+  ~/dev/almasi.o
+  ~/dev/almasi.do
+  ~/dev/almasi.yo
 )
 
 # Add, commit and push all core repos with the same message
